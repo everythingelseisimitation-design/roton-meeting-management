@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./replitAuth";
 import { 
   insertTeamMemberSchema,
   insertMeetingSchema,
@@ -16,15 +16,24 @@ import {
 import { sendEmail } from "./services/emailService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Auth middleware - TEMPORARILY DISABLED FOR RAILWAY DEPLOYMENT
+  // await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Mock user for testing without authentication
+  const MOCK_USER_ID = "test-user-001";
+
+  // Auth routes - TEMPORARILY DISABLED FOR RAILWAY DEPLOYMENT
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      // Return mock user for testing
+      const mockUser = {
+        id: MOCK_USER_ID,
+        email: "test@roton.ro",
+        firstName: "Test",
+        lastName: "User",
+        profileImageUrl: null
+      };
+      res.json(mockUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -32,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team member routes
-  app.get('/api/team-members', isAuthenticated, async (req, res) => {
+  app.get('/api/team-members', async (req, res) => {
     try {
       const teamMembers = await storage.getAllTeamMembers();
       res.json(teamMembers);
@@ -42,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/team-members/department/:department', isAuthenticated, async (req, res) => {
+  app.get('/api/team-members/department/:department', async (req, res) => {
     try {
       const { department } = req.params;
       const teamMembers = await storage.getTeamMembersByDepartment(department);
@@ -53,9 +62,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/team-members', isAuthenticated, async (req: any, res) => {
+  app.post('/api/team-members', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validatedData = insertTeamMemberSchema.parse(req.body);
       const teamMember = await storage.createTeamMember(validatedData, userId);
       res.status(201).json(teamMember);
@@ -65,10 +74,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/team-members/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/team-members/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const updates = req.body;
       const teamMember = await storage.updateTeamMember(id, updates, userId);
       res.json(teamMember);
@@ -78,10 +87,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/team-members/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/team-members/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       await storage.deleteTeamMember(id, userId);
       res.status(204).send();
     } catch (error) {
@@ -91,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Meeting routes
-  app.get('/api/meetings', isAuthenticated, async (req, res) => {
+  app.get('/api/meetings', async (req, res) => {
     try {
       const { startDate, endDate, type } = req.query;
       
@@ -111,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/meetings/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/meetings/:id', async (req, res) => {
     try {
       const { id } = req.params;
       const meeting = await storage.getMeetingById(id);
@@ -125,9 +134,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/meetings', isAuthenticated, async (req: any, res) => {
+  app.post('/api/meetings', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validatedData = insertMeetingSchema.parse({
         ...req.body,
         createdBy: userId,
@@ -161,10 +170,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/meetings/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/meetings/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const updates = req.body;
       const meeting = await storage.updateMeeting(id, updates, userId);
       res.json(meeting);
@@ -174,10 +183,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/meetings/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/meetings/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       await storage.deleteMeeting(id, userId);
       res.status(204).send();
     } catch (error) {
@@ -187,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Focus songs routes
-  app.get('/api/focus-songs', isAuthenticated, async (req, res) => {
+  app.get('/api/focus-songs', async (req, res) => {
     try {
       const { active, backCatalog } = req.query;
       
@@ -207,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/focus-songs/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/focus-songs/:id', async (req, res) => {
     try {
       const { id } = req.params;
       const song = await storage.getFocusSongById(id);
@@ -221,9 +230,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/focus-songs', isAuthenticated, async (req: any, res) => {
+  app.post('/api/focus-songs', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validatedData = insertFocusSongSchema.parse(req.body);
       const song = await storage.createFocusSong(validatedData, userId);
       res.status(201).json(song);
@@ -233,10 +242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/focus-songs/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/focus-songs/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const updates = req.body;
       const song = await storage.updateFocusSong(id, updates, userId);
       res.json(song);
@@ -246,10 +255,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/focus-songs/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/focus-songs/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       await storage.deleteFocusSong(id, userId);
       res.status(204).send();
     } catch (error) {
@@ -259,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task routes
-  app.get('/api/tasks', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks', async (req, res) => {
     try {
       const { assignee, meeting, focusSong, status } = req.query;
       
@@ -283,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/tasks/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/tasks/:id', async (req, res) => {
     try {
       const { id } = req.params;
       const task = await storage.getTaskById(id);
@@ -297,9 +306,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/tasks', isAuthenticated, async (req: any, res) => {
+  app.post('/api/tasks', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       
       // Preprocess data to handle empty date strings
       const processedBody = {
@@ -318,10 +327,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/tasks/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       
       // Preprocess data to handle empty date strings
       const updates = {
@@ -337,10 +346,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/tasks/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/tasks/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       await storage.deleteTask(id, userId);
       res.status(204).send();
     } catch (error) {
@@ -350,7 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Meeting minutes routes
-  app.get('/api/meeting-minutes/:meetingId', isAuthenticated, async (req, res) => {
+  app.get('/api/meeting-minutes/:meetingId', async (req, res) => {
     try {
       const { meetingId } = req.params;
       const minutes = await storage.getMeetingMinutesByMeeting(meetingId);
@@ -364,9 +373,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/meeting-minutes', isAuthenticated, async (req: any, res) => {
+  app.post('/api/meeting-minutes', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validatedData = insertMeetingMinutesSchema.parse({
         ...req.body,
         createdBy: userId,
@@ -380,10 +389,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/meeting-minutes/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/meeting-minutes/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const updates = req.body;
       const minutes = await storage.updateMeetingMinutes(id, updates, userId);
       res.json(minutes);
@@ -394,7 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Daily metrics routes
-  app.get('/api/daily-metrics/:focusSongId', isAuthenticated, async (req, res) => {
+  app.get('/api/daily-metrics/:focusSongId', async (req, res) => {
     try {
       const { focusSongId } = req.params;
       const metrics = await storage.getDailyMetricsByFocusSong(focusSongId);
@@ -405,9 +414,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/daily-metrics', isAuthenticated, async (req: any, res) => {
+  app.post('/api/daily-metrics', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validatedData = insertDailyMetricsSchema.parse({
         ...req.body,
         createdBy: userId,
@@ -420,10 +429,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/daily-metrics/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/daily-metrics/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const updates = req.body;
       const metrics = await storage.updateDailyMetrics(id, updates, userId);
       res.json(metrics);
@@ -433,10 +442,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/daily-metrics/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/daily-metrics/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       await storage.deleteDailyMetrics(id, userId);
       res.status(204).send();
     } catch (error) {
@@ -446,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Action items routes
-  app.get('/api/action-items', isAuthenticated, async (req, res) => {
+  app.get('/api/action-items', async (req, res) => {
     try {
       const { type, status, assignedTo } = req.query;
       let actionItems;
@@ -468,9 +477,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/action-items', isAuthenticated, async (req: any, res) => {
+  app.post('/api/action-items', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validatedData = insertActionItemSchema.parse({
         ...req.body,
         createdBy: userId,
@@ -483,10 +492,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/action-items/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/action-items/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const updates = req.body;
       const actionItem = await storage.updateActionItem(id, updates, userId);
       res.json(actionItem);
@@ -496,10 +505,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/action-items/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/action-items/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       await storage.deleteActionItem(id, userId);
       res.status(204).send();
     } catch (error) {
@@ -509,7 +518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Calendar actions routes  
-  app.get('/api/calendar-actions', isAuthenticated, async (req, res) => {
+  app.get('/api/calendar-actions', async (req, res) => {
     try {
       const { date, startDate, endDate, pending } = req.query;
       let calendarActions;
@@ -531,9 +540,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/calendar-actions', isAuthenticated, async (req: any, res) => {
+  app.post('/api/calendar-actions', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const validatedData = insertCalendarActionSchema.parse({
         ...req.body,
         createdBy: userId,
@@ -546,10 +555,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/calendar-actions/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/calendar-actions/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       const updates = req.body;
       const calendarAction = await storage.updateCalendarAction(id, updates, userId);
       res.json(calendarAction);
@@ -559,10 +568,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/calendar-actions/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/calendar-actions/:id', async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user.claims.sub;
+      const userId = MOCK_USER_ID;
       await storage.deleteCalendarAction(id, userId);
       res.status(204).send();
     } catch (error) {
@@ -572,7 +581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // History log routes
-  app.get('/api/history/:entityType/:entityId', isAuthenticated, async (req, res) => {
+  app.get('/api/history/:entityType/:entityId', async (req, res) => {
     try {
       const { entityType, entityId } = req.params;
       const history = await storage.getHistoryByEntity(entityType, entityId);
@@ -584,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced focus songs routes
-  app.get('/api/focus-songs/category/:category', isAuthenticated, async (req, res) => {
+  app.get('/api/focus-songs/category/:category', async (req, res) => {
     try {
       const { category } = req.params;
       const songs = await storage.getFocusSongsByCategory(category);
